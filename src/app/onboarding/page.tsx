@@ -1,6 +1,7 @@
 // src/app/onboarding/page.tsx
 "use client";
 
+export const dynamic = "force-dynamic";
 import { FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
