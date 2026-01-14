@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { 
@@ -23,7 +23,8 @@ import {
   Compass
 } from "lucide-react";
 
-export default function DashboardPage() {
+//export default function DashboardPage() {
+  function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -475,5 +476,20 @@ export default function DashboardPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+
+//suspense boundary for searchparams
+// This is the new default export that wraps your UI in a Suspense boundary
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-slate-400 animate-pulse uppercase tracking-widest">
+        Loading Cobuild...
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
