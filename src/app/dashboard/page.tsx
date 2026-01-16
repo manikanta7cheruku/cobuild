@@ -56,28 +56,28 @@ function DashboardContent() {
 
   // 1. FETCH ALL DATA
   useEffect(() => {
-    async function getData() {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+        async function getData() {
+      const { data: auth } = await supabase.auth.getUser();
+      const authUser = auth?.user;
       setUser(authUser);
 
       if (authUser) {
-        const { data: profileData } = await supabase.from("profiles").select("full_name").eq("id", authUser.id).single();
-        setProfile(profileData);
+        const { data: pData } = await supabase.from("profiles").select("full_name").eq("id", authUser.id).single();
+        setProfile(pData);
 
-        const { data: projData } = await supabase
-          .from("projects")
-          .select(`*, profiles:owner_id (full_name, username)`)
-          .order("created_at", { ascending: false });
-        
-        const { data: favData } = await supabase
-          .from("favorites")
-          .select("project_id")
-          .eq("user_id", authUser.id);
+        const { data: projData } = await supabase.from("projects").select("*, profiles:owner_id(full_name, username)").order("created_at", { ascending: false });
+        const { data: favData } = await supabase.from("favorites").select("project_id").eq("user_id", authUser.id);
 
         if (projData) setProjects(projData as any[]);
-        
-        // FIXED LINE: Added explicit (f: any) to stop Vercel build error
-        if (favData) setFavorites(favData.map((f: { project_id: string }) => f.project_id));
+
+        // REPLACED MAP WITH FOR-LOOP TO KILL THE TYPE ERROR
+        if (favData) {
+          const tempFavs: string[] = [];
+          for (let i = 0; i < favData.length; i++) {
+            tempFavs.push(favData[i].project_id);
+          }
+          setFavorites(tempFavs);
+        }
       }
       setLoading(false);
     }
