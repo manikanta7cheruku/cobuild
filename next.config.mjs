@@ -1,13 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    // This tells Vercel to ignore those "f" type errors and finish the build
+    // This ignores the "f" type errors and finishes the build
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // This prevents linting warnings from stopping the build
-    ignoreDuringBuilds: true,
-  },
+  // We removed the 'eslint' and 'experimental' keys to stop the warnings
 };
 
 export default nextConfig;
