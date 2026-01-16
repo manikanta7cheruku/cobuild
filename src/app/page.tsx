@@ -46,6 +46,8 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
 
+    const supabase = createClient(); // <--- ADDED NEW
+
     try {
       if (isLogin) {
         // --- LOG IN LOGIC ---
