@@ -2,38 +2,37 @@ import { NextResponse } from "next/server";
 import { createClient } from "../../../utils/supabase/server";
 
 export async function GET(request: Request) {
-  const { origin } = new URL(request.url);
-  const code = new URL(request.url).searchParams.get("code");
+  const { origin, searchParams } = new URL(request.url);
+  const code = searchParams.get("code");
+  // Check if there is a 'next' param, otherwise default to onboarding
+  const next = searchParams.get("next") ?? "/onboarding";
 
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // read the authed user from cookie-based session
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      let redirectPath = "/onboarding"; // default for new users
+      const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        // check if profile already exists
+        // 1. CHECK IF PROFILE EXISTS
         const { data: existingProfile } = await supabase
           .from("profiles")
           .select("id")
           .eq("id", user.id)
           .maybeSingle();
 
-        // if profile exists, go to dashboard instead of onboarding
+        // 2. LOGIC: If profile exists, go to Dashboard. If not, force Onboarding.
         if (existingProfile) {
-          redirectPath = "/dashboard";
+          return NextResponse.redirect(`${origin}/dashboard`);
+        } else {
+          return NextResponse.redirect(`${origin}/onboarding`);
         }
       }
-
-      return NextResponse.redirect(`${origin}${redirectPath}`);
     }
   }
 
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+  // 3. ERROR HANDLING: If code is invalid or expired
+  // Redirect to home with an error message instead of showing a 404
+  return NextResponse.redirect(`${origin}/?error=link-expired`);
 }

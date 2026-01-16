@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+// 1. Vercel build safety
+export const dynamic = "force-dynamic";
+
+import React, { useState, useEffect } from "react";
 import { Github, LayoutGrid, Loader2 } from "lucide-react";
 import { createClient } from "../utils/supabase/client";
-import { useRouter } from "next/navigation"; // 1. Added Router for manual redirect
+import { useRouter } from "next/navigation";
 
-// ... (Google Icon Component - same as before)
+// Google Icon Component
 const GoogleIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -16,21 +19,25 @@ const GoogleIcon = () => (
 );
 
 export default function AuthPage() {
-  const supabase = createClient();
-  const router = useRouter(); // Initialize Router
-  const [isLogin, setIsLogin] = useState(false);
-  
+  const router = useRouter();
+  const [isLogin, setIsLogin] = useState(true); // Default to login for professional feel
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // Initialize Supabase only in browser to prevent Vercel "undefined" build errors
+  const [supabase, setSupabase] = useState<any>(null);
+  useEffect(() => {
+    setSupabase(createClient());
+  }, []);
 
-  // 2. SOCIAL LOGIN (Google/GitHub) REDIRECT LOGIC
+  // SOCIAL LOGIN (Google/GitHub)
   const handleSocialLogin = async (provider: 'google' | 'github') => {
+    if (!supabase) return;
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: provider,
       options: {
-        // This tells Supabase: Go to callback, then go to /onboarding
         redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
       },
     });
@@ -41,27 +48,38 @@ export default function AuthPage() {
     }
   };
 
-  // 3. EMAIL/PASSWORD REDIRECT LOGIC
-    const handleAuth = async (e: React.FormEvent) => {
+  // EMAIL/PASSWORD AUTH
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supabase) return;
     setLoading(true);
-
-    //const supabase = createClient(); // <--- ADDED NEW
 
     try {
       if (isLogin) {
-        // --- LOG IN LOGIC ---
-        const { data: { user }, error } = await supabase.auth.signInWithPassword({ email, password });
+        // --- LOG IN ---
+        const { data: { user }, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
         if (error) throw error;
-
+        
         if (user) {
-          const { data: profile } = await supabase.from("profiles").select("id").eq("id", user.id).single();
-          if (profile) router.push("/dashboard");
-          else router.push("/onboarding");
+            // CHECK IF PROFILE EXISTS (The "Onboarding Gate")
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("id", user.id)
+                .single();
+
+            if (profile) {
+                router.push("/dashboard"); 
+            } else {
+                router.push("/onboarding");
+            }
         }
         
       } else {
-        // --- SIGN UP LOGIC ---
+        // --- SIGN UP ---
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -71,32 +89,27 @@ export default function AuthPage() {
         });
 
         if (error) {
-           // CHECK IF USER ALREADY EXISTS
-           if (error.status === 422 || error.message.toLowerCase().includes("already registered")) {
-             alert("Account already exists with this email. Please switch to 'Log In' to continue.");
-             setIsLogin(true); // Automatically switch the UI to the Login form
-             setLoading(false);
-             return;
-           }
-           throw error;
+            // HANDLE ALREADY REGISTERED ERROR
+            if (error.message.toLowerCase().includes("already registered")) {
+                alert("An account with this email already exists. Please log in.");
+                setIsLogin(true);
+                setLoading(false);
+                return;
+            }
+            throw error;
         }
-
+        
         if (data.user) {
-          if (data.session) {
-            router.push("/onboarding");
-          } else {
-            alert("Verification email sent! Please check your inbox to confirm your account.");
-          }
+            alert("Verification email sent! Click the link in your email to finish signing up and start your onboarding.");
         }
       }
     } catch (error: any) {
-      alert("Auth Error: " + error.message);
+      alert("Error: " + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ... (Rest of the UI/HTML is exactly the same as before) ...
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#F9FAFB] text-slate-900 font-sans relative overflow-x-hidden">
       
@@ -109,7 +122,7 @@ export default function AuthPage() {
           <div className="bg-slate-900 text-white p-2 rounded-lg"><LayoutGrid size={24} /></div>
           <span>Cobuild</span>
         </div>
-        <div className="max-w-lg mb-8 md:mb-0">
+        <div className="max-w-lg mb-8 md:mb-0 text-left">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight mb-4 text-slate-900">
             {isLogin ? "Ready to ship?" : "Build projects."} <br />
             <span className="text-blue-600">{isLogin ? "Welcome back." : "Find your squad."}</span>
@@ -118,7 +131,7 @@ export default function AuthPage() {
             {isLogin ? "Pick up right where you left off. Your squad is waiting for you." : "Connect with motivated builders and turn MVPs into reality."}
           </p>
           <div className="inline-flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-full shadow-sm">
-            <span className={`w-2.5 h-2.5 rounded-full ${isLogin ? "bg-green-500" : "bg-green-500"} animate-pulse`}></span>
+            <span className={`w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse`}></span>
             <span className="text-sm font-medium text-slate-700">{isLogin ? "Community Online" : "Accepting new builders"}</span>
           </div>
         </div>
@@ -132,7 +145,7 @@ export default function AuthPage() {
       {/* Right Side */}
       <div className="w-full md:w-1/2 relative z-10 flex flex-col items-center justify-center p-4 md:p-0">
         <div className="bg-white md:h-full md:w-full w-full max-w-md md:max-w-none rounded-3xl md:rounded-none shadow-xl md:shadow-none p-8 md:p-24 flex flex-col justify-center">
-          <div className="w-full max-w-md mx-auto space-y-6">
+          <div className="w-full max-w-md mx-auto space-y-6 text-left">
             <div>
               <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">{isLogin ? "Welcome back" : "Get started"}</h2>
               <p className="mt-2 text-slate-500">{isLogin ? "Please enter your details to sign in." : "Join the community today."}</p>
@@ -140,14 +153,16 @@ export default function AuthPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <button 
+                type="button"
                 onClick={() => handleSocialLogin('google')}
-                className="flex items-center justify-center gap-2 py-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition font-medium text-slate-700"
+                className="flex items-center justify-center gap-2 py-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition font-medium text-slate-700 cursor-pointer"
               >
                 <GoogleIcon /> Google
               </button>
               <button 
+                type="button"
                 onClick={() => handleSocialLogin('github')}
-                className="flex items-center justify-center gap-2 py-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition font-medium text-slate-700"
+                className="flex items-center justify-center gap-2 py-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition font-medium text-slate-700 cursor-pointer"
               >
                 <Github size={20} /> GitHub
               </button>
@@ -163,7 +178,7 @@ export default function AuthPage() {
                 <input
                   type="email"
                   placeholder="Email address"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-slate-900 placeholder:text-slate-400"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-slate-900 placeholder:text-slate-400 font-sans"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -173,7 +188,7 @@ export default function AuthPage() {
                 <input
                   type="password"
                   placeholder="Password"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-slate-900 placeholder:text-slate-400"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-slate-900 placeholder:text-slate-400 font-sans"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -181,7 +196,7 @@ export default function AuthPage() {
               </div>
 
               {isLogin && (
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-sm font-sans">
                   <label className="flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900">
                     <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" /> Remember me
                   </label>
@@ -192,15 +207,15 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold shadow-lg shadow-slate-900/20 transition-all duration-200 flex justify-center items-center"
+                className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold shadow-lg shadow-slate-900/20 transition-all duration-200 flex justify-center items-center cursor-pointer"
               >
                 {loading ? <Loader2 className="animate-spin" /> : (isLogin ? "Log In" : "Sign Up")}
               </button>
             </form>
 
-            <p className="text-center text-sm text-slate-600">
+            <p className="text-center text-sm text-slate-600 font-sans">
               {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <button onClick={() => setIsLogin(!isLogin)} className="font-bold text-blue-600 hover:text-blue-500 transition">
+              <button onClick={() => setIsLogin(!isLogin)} className="font-bold text-blue-600 hover:text-blue-500 transition underline">
                 {isLogin ? "Sign up for free" : "Log in"}
               </button>
             </p>
@@ -208,9 +223,9 @@ export default function AuthPage() {
         </div>
 
         <div className="md:hidden flex gap-6 text-xs font-bold text-slate-400 tracking-wider uppercase mt-8 mb-4">
-            <a href="#" className="hover:text-black transition-colors duration-200">About</a>
-            <a href="#" className="hover:text-black transition-colors duration-200">Manifesto</a>
-            <a href="#" className="hover:text-black transition-colors duration-200">Contact</a>
+            <a href="#" className="hover:text-black transition-colors duration-200 font-sans">About</a>
+            <a href="#" className="hover:text-black transition-colors duration-200 font-sans">Manifesto</a>
+            <a href="#" className="hover:text-black transition-colors duration-200 font-sans">Contact</a>
         </div>
       </div>
     </div>
