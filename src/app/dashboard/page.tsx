@@ -77,7 +77,7 @@ function DashboardContent() {
         if (projData) setProjects(projData as any[]);
         
         // FIXED LINE: Added explicit (f: any) to stop Vercel build error
-        if (favData) setFavorites(favData.map((f: any) => f.project_id));
+        if (favData) setFavorites(favData.map((f: { project_id: string }) => f.project_id));
       }
       setLoading(false);
     }
