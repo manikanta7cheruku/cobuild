@@ -32,9 +32,10 @@ export default function AuthPage() {
   }, []);
 
   // SOCIAL LOGIN (Google/GitHub)
+    // 1. Move social login logic inside the component properly
   const handleSocialLogin = async (provider: 'google' | 'github') => {
-    if (!supabase) return;
     setLoading(true);
+    const supabase = createClient(); // Initialize here
     const { error } = await supabase.auth.signInWithOAuth({
       provider: provider,
       options: {
@@ -48,11 +49,12 @@ export default function AuthPage() {
     }
   };
 
-  // EMAIL/PASSWORD AUTH
+  // 2. Move email auth logic inside
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supabase) return;
     setLoading(true);
+
+    const supabase = createClient(); // Initialize here to stop the 'undefined' error
 
     try {
       if (isLogin) {
@@ -64,18 +66,10 @@ export default function AuthPage() {
         if (error) throw error;
         
         if (user) {
-            // CHECK IF PROFILE EXISTS (The "Onboarding Gate")
-            const { data: profile } = await supabase
-                .from("profiles")
-                .select("id")
-                .eq("id", user.id)
-                .single();
-
-            if (profile) {
-                router.push("/dashboard"); 
-            } else {
-                router.push("/onboarding");
-            }
+          // Check if they finished onboarding
+          const { data: profile } = await supabase.from("profiles").select("id").eq("id", user.id).single();
+          if (profile) router.push("/dashboard");
+          else router.push("/onboarding");
         }
         
       } else {
@@ -89,19 +83,16 @@ export default function AuthPage() {
         });
 
         if (error) {
-            // HANDLE ALREADY REGISTERED ERROR
-            if (error.message.toLowerCase().includes("already registered")) {
-                alert("An account with this email already exists. Please log in.");
-                setIsLogin(true);
-                setLoading(false);
-                return;
-            }
-            throw error;
+           if (error.message.includes("already registered")) {
+             alert("Email already registered. Please log in.");
+             setIsLogin(true);
+           } else {
+             alert(error.message);
+           }
+           setLoading(false);
+           return;
         }
-        
-        if (data.user) {
-            alert("Verification email sent! Click the link in your email to finish signing up and start your onboarding.");
-        }
+        alert("Check your email!");
       }
     } catch (error: any) {
       alert("Error: " + error.message);
