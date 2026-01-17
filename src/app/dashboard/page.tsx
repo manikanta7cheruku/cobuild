@@ -62,7 +62,8 @@ function DashboardContent() {
       setUser(authUser);
 
       if (authUser) {
-        const { data: pData } = await supabase.from("profiles").select("full_name").eq("id", authUser.id).single();
+        // Added "username" to the select list
+        const { data: pData } = await supabase.from("profiles").select("full_name, username").eq("id", authUser.id).single();
         setProfile(pData);
 
         const { data: projData } = await supabase.from("projects").select("*, profiles:owner_id(full_name, username)").order("created_at", { ascending: false });
@@ -161,7 +162,20 @@ function DashboardContent() {
                     <div className="absolute right-0 top-11 md:top-12 w-64 md:w-80 bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden transform origin-top-right transition-all z-50">
                         <div className="max-h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar">
                             <div className="px-5 py-3 border-b border-slate-50 bg-slate-50/30 text-left"><p className="text-[15px] font-bold text-slate-900 leading-tight font-sans">{displayName}</p><p className="text-[11px] text-slate-400 truncate font-medium">{user?.email}</p></div>
-                            <button className="w-full flex items-center gap-3 px-5 py-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition text-left cursor-pointer font-sans"><User size={16} className="text-slate-400" /> View Profile</button>
+                            <button 
+  onClick={() => {
+    if (profile?.username) {
+       router.push(`/dashboard/profile/${profile.username}`);
+    } else {
+       console.error("No username found for profile:", profile);
+       alert("Your profile is missing a username. Please check database.");
+    }
+    setUserMenuOpen(false);
+  }}
+  className="w-full flex items-center gap-3 px-5 py-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition text-left cursor-pointer font-sans"
+>
+  <User size={16} className="text-slate-400" /> View Profile
+</button>
                             <div className="border-t border-slate-50" />
                             <div>
                                 <button onClick={toggleMyProjects} className="w-full flex items-center justify-between px-5 py-3 text-[13px] font-bold text-slate-800 hover:bg-slate-50 transition cursor-pointer font-sans"><div className="flex items-center gap-3"><Briefcase size={16} className="text-blue-600" /> My Projects</div>{projectsAccordionOpen ? <ChevronUp size={14} className="text-slate-300" /> : <ChevronDown size={14} className="text-slate-300" />}</button>
