@@ -266,3 +266,47 @@ export async function deleteProject(projectId: string) {
   revalidatePath("/dashboard");
   return { success: true };
 }
+
+
+// 11. Leave Project (Member exiting voluntarily)
+export async function leaveProject(projectId: string, roleId: string, reason: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Login required" };
+
+  // 1. Fetch Project
+  const { data: project } = await supabase.from("projects").select("squad").eq("id", projectId).single();
+  if (!project) return { error: "Project not found" };
+
+  // 2. Update Application Status to 'left'
+  // We find the application by project_id and user_id
+  const { error: appError } = await supabase
+    .from("applications")
+    .update({ status: 'left', note: reason }) // We save the exit reason in the note or a new column (using note is fine for MVP)
+    .eq("project_id", projectId)
+    .eq("user_id", user.id)
+    .eq("role_id", roleId); // Ensure we target the specific role
+
+  if (appError) return { error: appError.message };
+
+  // 3. Reset Squad Slot in JSON
+  const updatedSquad = project.squad.map((member: any) => {
+      // Check if this slot was filled by the current user
+      if (member.id === roleId && member.filledBy === user.id) {
+        return {
+          ...member,
+          isFilled: false,
+          filledBy: null,
+          name: null,
+          username: null
+        };
+      }
+      return member;
+  });
+
+  const { error } = await supabase.from("projects").update({ squad: updatedSquad }).eq("id", projectId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  return { success: true };
+}

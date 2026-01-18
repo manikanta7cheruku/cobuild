@@ -4,6 +4,7 @@ import Link from "next/link";
 import ProjectClientUI from "@/components/ProjectClientUI";
 import ApplicationWrapper from "./ApplicationWrapper"; 
 import DeleteProjectWrapper from "./DeleteProjectWrapper";
+import LeaveSquadWrapper from "@/components/LeaveSquadWrapper";
 import { Clock, Lock, Plus, Github, MessageCircle } from "lucide-react";
 
 const timeAgo = (date: string) => {
@@ -185,14 +186,21 @@ export default async function ProjectDetailsPage(props: { params: Promise<{ id: 
                                     <div key={member.id}>
                                         {member.isFilled ? (
                                             /* FILLED SLOT */
-                                            member.filledBy === user?.id ? (
+                                             member.filledBy === user?.id ? (
                                                 /* YOU (Current User) */
                                                 <div className="flex items-center justify-between bg-blue-50/50 p-2 rounded-xl border border-blue-100">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border-2 border-blue-200"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${member.username}`} alt="avatar" /></div>
-                                                        <div><p className="text-sm font-bold text-slate-900">You</p><p className="text-xs text-blue-600 font-bold">{member.title}</p></div>
+                                                        <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border-2 border-blue-200">
+                                                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${member.username}`} alt="avatar" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-slate-900">You</p>
+                                                            <p className="text-xs text-blue-600 font-bold">{member.title}</p>
+                                                        </div>
                                                     </div>
-                                                    <span className="text-[10px] font-bold text-blue-600 bg-white px-2 py-1 rounded border border-blue-100">Joined</span>
+                                                    
+                                                    {/* Leave Button */}
+                                                    <LeaveSquadWrapper projectId={id} roleId={member.id} />
                                                 </div>
                                             ) : (
                                                 /* OTHER MEMBER */
