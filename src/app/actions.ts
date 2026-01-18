@@ -94,3 +94,60 @@ export async function deletePortfolioItem(itemId: string, username: string) {
   revalidatePath(`/dashboard/profile/${username}`);
   return { success: true };
 }
+
+
+
+// ... (Your existing deletePortfolioItem function is above here) ...
+
+// 5. Apply to Project (This fixes the red underline in ApplicationModal)
+export async function applyToProject(projectId: string, roleId: string, roleTitle: string, formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Login required" };
+
+  // Check if already applied
+  const { data: existing } = await supabase
+    .from("applications")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (existing) return { error: "You have already applied to this project." };
+
+  const { error } = await supabase.from("applications").insert({
+    project_id: projectId,
+    user_id: user.id,
+    role_id: roleId,
+    role_title: roleTitle,
+    note: formData.get("note") as string,
+    portfolio_link: formData.get("portfolio_link") as string,
+    availability: formData.get("availability") as string,
+    status: 'pending'
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  return { success: true };
+}
+
+// 6. Post Comment (This fixes the red underline in ProjectClientUI)
+export async function postComment(projectId: string, content: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Login required" };
+
+  const { error } = await supabase.from("comments").insert({
+    project_id: projectId,
+    user_id: user.id,
+    content: content
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  return { success: true };
+}

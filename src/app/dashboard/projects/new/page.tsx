@@ -74,8 +74,10 @@ export default function StartProjectPage() {
     setSquad([...squad, newSlot]);
   };
 
-  const removeSlot = (id: string) => {
-    setSquad(squad.filter((s) => s.id !== id || s.type !== "leader"));
+    const removeSlot = (id: string) => {
+    // FIX: Simply filter out the item that matches the ID.
+    // The UI already hides the delete button for the 'leader', so we don't need complex logic here.
+    setSquad((prev) => prev.filter((s) => s.id !== id));
   };
 
   const updateSkill = (id: string, value: string) => {
@@ -224,7 +226,17 @@ export default function StartProjectPage() {
                     {member.isFilled ? (
                       <p className="text-xs text-slate-500 font-bold uppercase tracking-tight">Admin</p>
                     ) : (
-                      <input type="text" value={member.skill} onChange={(e) => updateSkill(member.id, e.target.value)} placeholder="e.g. React / Frontend" className="text-xs font-medium w-full mt-1 border-b border-dashed border-slate-300 focus:outline-none focus:border-blue-500 placeholder:text-slate-400 bg-transparent pb-0.5" />
+                      <input 
+                          type="text" 
+                          value={member.skill} 
+                          onChange={(e) => updateSkill(member.id, e.target.value)} 
+                          placeholder={
+                            member.type === 'design' ? "e.g. Figma / UI / Branding" : 
+                            member.type === 'market' ? "e.g. SEO / Growth / Content" : 
+                            "e.g. React / Frontend"
+                          } 
+                          className="text-xs font-medium w-full mt-1 border-b border-dashed border-slate-300 focus:outline-none focus:border-blue-500 placeholder:text-slate-400 bg-transparent pb-0.5" 
+                        />
                     )}
                   </div>
 
@@ -251,7 +263,7 @@ export default function StartProjectPage() {
           <hr className="border-slate-200" />
 
           {/* SECTION 3: PRIVACY / UNIVERSITY FILTER */}
-          <div 
+          {/* <div 
             onClick={() => setLimitToStanford(!limitToStanford)}
             className="p-6 bg-blue-50 rounded-2xl border border-blue-100 flex items-start gap-4 cursor-pointer hover:bg-blue-100 transition shadow-sm"
           >
@@ -264,7 +276,7 @@ export default function StartProjectPage() {
                 If checked, this project will <strong className="text-blue-900 underline">only</strong> be visible to users with a verified <code className="bg-blue-100 px-1 py-0.5 rounded text-blue-800 font-bold text-[11px]">@stanford.edu</code> email address.
               </p>
             </div>
-          </div>
+          </div> */}
 
         </form>
       </div>

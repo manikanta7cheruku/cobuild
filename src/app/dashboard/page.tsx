@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import Link from "next/link";
 import { 
   X, Zap, Plus, Star, Search, Bell, 
   User, Settings, LogOut, HelpCircle, 
@@ -267,18 +268,53 @@ function DashboardContent() {
             <div className="py-20 text-center font-bold text-slate-400 animate-pulse text-xs tracking-widest uppercase italic font-sans">Syncing Data...</div>
           ) : filteredProjects.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6 pb-20">
-              {filteredProjects.map((project) => (
-                <div key={project.id} className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-lg transition duration-300 cursor-pointer group flex flex-col h-full shadow-sm text-left">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wide font-sans ${project.limit_to_uni ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-green-50 text-green-700 border-green-100'}`}>{project.limit_to_uni ? "Campus Only" : "Idea Phase"}</span>
-                        <span className="text-[10px] text-slate-400 font-bold font-sans flex items-center gap-1"><Clock size={10} /> {getRelativeTime(project.created_at)}</span>
+                            {filteredProjects.map((project) => (
+                <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="block h-full">
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-lg transition duration-300 cursor-pointer group flex flex-col h-full shadow-sm text-left relative">
+                    
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wide font-sans ${project.limit_to_uni ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-green-50 text-green-700 border-green-100'}`}>{project.limit_to_uni ? "Campus Only" : "Idea Phase"}</span>
+                          <span className="text-[10px] text-slate-400 font-bold font-sans flex items-center gap-1"><Clock size={10} /> {getRelativeTime(project.created_at)}</span>
+                      </div>
+                      
+                      {/* Favorite Button: preventDefault ensures clicking star doesn't open the project page */}
+                      <button 
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(e, project.id); }} 
+                        className={`z-10 transition-all transform active:scale-125 cursor-pointer ${favorites.includes(project.id) ? 'text-yellow-400' : 'text-slate-300 hover:text-yellow-400'}`}
+                      >
+                        <Star size={18} fill={favorites.includes(project.id) ? "currentColor" : "none"} strokeWidth={2.5} />
+                      </button>
                     </div>
-                    <button onClick={(e) => toggleFavorite(e, project.id)} className={`transition-all transform active:scale-125 cursor-pointer ${favorites.includes(project.id) ? 'text-yellow-400' : 'text-slate-300 hover:text-yellow-400'}`}><Star size={18} fill={favorites.includes(project.id) ? "currentColor" : "none"} strokeWidth={2.5} /></button>
+
+                    <div className="mb-auto">
+                      <h2 className="text-[17px] md:text-[18px] font-bold text-slate-900 mb-2 leading-tight group-hover:text-blue-600 transition tracking-tight font-sans text-left">{project.name}</h2>
+                      <p className="text-[13px] md:text-[14px] text-slate-500 mb-5 line-clamp-2 leading-relaxed font-medium font-sans text-left">{project.pitch}</p>
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {project.tech_stack?.map((tech: string) => (
+                          <span key={tech} className="px-2 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded text-[9px] font-bold uppercase tracking-tight transition-colors group-hover:bg-blue-50 font-sans">#{tech}</span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-4 mt-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-left">
+                        <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center text-[9px] font-bold text-slate-500 uppercase tracking-tighter">
+                          {project.owner_id === user?.id ? "YOU" : (project.profiles?.full_name?.substring(0,2).toUpperCase() || "MK")}
+                        </div>
+                        <span className="text-[11px] text-slate-600 font-bold uppercase tracking-tight font-sans">Lead</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-green-50 px-2.5 py-1 rounded-lg border border-green-100 font-sans">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                        </span>
+                        <span className="text-[10px] md:text-[11px] font-bold text-green-700 tracking-tight font-sans">{getOpenSpotsCount(project.squad)} spots open</span>
+                      </div>
+                    </div>
+                  
                   </div>
-                  <div className="mb-auto"><h2 className="text-[17px] md:text-[18px] font-bold text-slate-900 mb-2 leading-tight group-hover:text-blue-600 transition tracking-tight font-sans text-left">{project.name}</h2><p className="text-[13px] md:text-[14px] text-slate-500 mb-5 line-clamp-2 leading-relaxed font-medium font-sans text-left">{project.pitch}</p><div className="flex flex-wrap gap-1.5 mb-4">{project.tech_stack?.map((tech: string) => (<span key={tech} className="px-2 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded text-[9px] font-bold uppercase tracking-tight transition-colors group-hover:bg-blue-50 font-sans">#{tech}</span>))}</div></div>
-                  <div className="border-t border-slate-100 pt-4 mt-2 flex items-center justify-between"><div className="flex items-center gap-2 text-left"><div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center text-[9px] font-bold text-slate-500 uppercase tracking-tighter">{project.owner_id === user?.id ? "YOU" : (project.profiles?.full_name?.substring(0,2).toUpperCase() || "MK")}</div><span className="text-[11px] text-slate-600 font-bold uppercase tracking-tight font-sans">Lead</span></div><div className="flex items-center gap-1.5 bg-green-50 px-2.5 py-1 rounded-lg border border-green-100 font-sans"><span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span></span><span className="text-[10px] md:text-[11px] font-bold text-green-700 tracking-tight font-sans">{getOpenSpotsCount(project.squad)} spots open</span></div></div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
