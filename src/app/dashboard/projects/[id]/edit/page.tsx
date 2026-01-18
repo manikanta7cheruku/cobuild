@@ -32,6 +32,8 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   const [projectSolution, setProjectSolution] = useState("");
   const [techStack, setTechStack] = useState("");
   const [limitToUni, setLimitToUni] = useState(false);
+  const [discordLink, setDiscordLink] = useState("");
+  const [repoLink, setRepoLink] = useState("");
   const [squad, setSquad] = useState<SquadMember[]>([]);
 
   // 1. FETCH EXISTING DATA
@@ -63,6 +65,8 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
       setProjectSolution(data.solution || "");
       setTechStack(data.tech_stack ? data.tech_stack.join(", ") : "");
       setLimitToUni(data.limit_to_uni);
+      setDiscordLink(data.discord_link || "");
+      setRepoLink(data.repo_link || "");
       setSquad(data.squad || []);
       setLoading(false);
     };
@@ -108,6 +112,8 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
       solution: projectSolution,
       tech_stack: techStack.split(",").map(s => s.trim()).filter(s => s !== ""),
       squad: squad,
+      discord_link: discordLink,
+      repo_link: repoLink,
       limit_to_uni: limitToUni
     }).eq("id", id);
 
@@ -156,7 +162,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
 
         <form onSubmit={(e) => e.preventDefault()} className="space-y-12">
 
-          {/* SECTION 1: THE BASICS */}
+                    {/* SECTION 1: THE BASICS */}
           <div className="space-y-6">
             <h2 className="text-lg font-bold text-slate-900">The Basics</h2>
 
@@ -185,9 +191,19 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
               <label className="block text-xs font-bold uppercase text-slate-500 tracking-wider mb-2">Tech Stack</label>
               <input type="text" value={techStack} onChange={(e) => setTechStack(e.target.value)} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 transition shadow-sm" />
             </div>
-          </div>
 
-          <hr className="border-slate-200" />
+            {/* NEW: WORKSPACE LINKS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 tracking-wider mb-2">Discord / Slack Link</label>
+                <input type="url" value={discordLink} onChange={(e) => setDiscordLink(e.target.value)} placeholder="https://discord.gg/..." className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 transition shadow-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 tracking-wider mb-2">GitHub Repo Link</label>
+                <input type="url" value={repoLink} onChange={(e) => setRepoLink(e.target.value)} placeholder="https://github.com/..." className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 transition shadow-sm" />
+              </div>
+            </div>
+          </div>
 
           {/* SECTION 2: THE SQUAD BUILDER */}
           <div className="space-y-6">
@@ -245,4 +261,4 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
       </div>
     </div>
   );
-}
+}   

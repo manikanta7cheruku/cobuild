@@ -6,11 +6,13 @@ import { Loader2 } from "lucide-react";
 export default function ProjectClientUI({ 
   overviewContent, 
   discussionContent, 
-  projectId 
+  projectId,
+  hasAccess // <--- NEW
 }: { 
   overviewContent: React.ReactNode; 
   discussionContent: React.ReactNode; 
   projectId: string;
+  hasAccess: boolean; // <--- NEW TYPE  
 }) {
   const [activeTab, setActiveTab] = useState<"overview" | "discussion">("overview");
   const [comment, setComment] = useState("");
@@ -26,7 +28,7 @@ export default function ProjectClientUI({
 
   return (
     <div className="lg:col-span-2 space-y-8">
-      {/* TABS */}
+            {/* TABS */}
       <div className="border-b border-slate-200 flex gap-8">
         <button 
           onClick={() => setActiveTab("overview")} 
@@ -34,12 +36,21 @@ export default function ProjectClientUI({
         >
           Overview
         </button>
-        <button 
-          onClick={() => setActiveTab("discussion")} 
-          className={`pb-3 border-b-2 text-sm font-bold transition ${activeTab === "discussion" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"}`}
-        >
-          Discussion
-        </button>
+        
+        {/* CONDITIONALLY RENDER DISCUSSION TAB */}
+        {hasAccess ? (
+            <button 
+              onClick={() => setActiveTab("discussion")} 
+              className={`pb-3 border-b-2 text-sm font-bold transition ${activeTab === "discussion" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+            >
+              Discussion
+            </button>
+        ) : (
+            // LOCKED TAB VISUAL
+            <div className="pb-3 border-b-2 border-transparent text-sm font-bold text-slate-300 cursor-not-allowed flex items-center gap-1 select-none">
+               Discussion <span className="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-400 uppercase tracking-wide">Locked</span>
+            </div>
+        )}
       </div>
 
       {/* CONTENT */}
