@@ -2,11 +2,11 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+//import { sendEmail } from "@/utils/mailer"; // Nodemailer Import
 
-// 1. Update Profile Action
+// 1. Update Profile
 export async function updateProfile(formData: any) {
   const supabase = await createClient();
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
@@ -25,11 +25,7 @@ export async function updateProfile(formData: any) {
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await supabase
-    .from("profiles")
-    .update(updates)
-    .eq("id", user.id);
-
+  const { error } = await supabase.from("profiles").update(updates).eq("id", user.id);
   if (error) return { error: error.message };
 
   revalidatePath(`/dashboard/profile/${formData.username}`);
@@ -37,11 +33,10 @@ export async function updateProfile(formData: any) {
   return { success: true };
 }
 
-// 2. Add Portfolio/Trophy Action
+// 2. Add Portfolio Item
 export async function addPortfolioItem(formData: FormData, username: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return { error: "Not authenticated" };
 
   const { error } = await supabase.from("portfolio_items").insert({
@@ -54,16 +49,14 @@ export async function addPortfolioItem(formData: FormData, username: string) {
   });
 
   if (error) return { error: error.message };
-
   revalidatePath(`/dashboard/profile/${username}`);
   return { success: true };
 }
 
-// 3. Update Trophy
+// 3. Update Portfolio Item
 export async function updatePortfolioItem(formData: FormData, itemId: string, username: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return { error: "Not authenticated" };
 
   const { error } = await supabase.from("portfolio_items").update({
@@ -75,45 +68,29 @@ export async function updatePortfolioItem(formData: FormData, itemId: string, us
   }).eq("id", itemId).eq("user_id", user.id);
 
   if (error) return { error: error.message };
-
   revalidatePath(`/dashboard/profile/${username}`);
   return { success: true };
 }
 
-// 4. Delete Trophy
+// 4. Delete Portfolio Item
 export async function deletePortfolioItem(itemId: string, username: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return { error: "Not authenticated" };
 
   const { error } = await supabase.from("portfolio_items").delete().eq("id", itemId).eq("user_id", user.id);
-
   if (error) return { error: error.message };
-
   revalidatePath(`/dashboard/profile/${username}`);
   return { success: true };
 }
 
-
-
-// ... (Your existing deletePortfolioItem function is above here) ...
-
-// 5. Apply to Project (This fixes the red underline in ApplicationModal)
+// 5. Apply to Project (With Email)
 export async function applyToProject(projectId: string, roleId: string, roleTitle: string, formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return { error: "Login required" };
 
-  // Check if already applied
-  const { data: existing } = await supabase
-    .from("applications")
-    .select("id")
-    .eq("project_id", projectId)
-    .eq("user_id", user.id)
-    .single();
-
+  const { data: existing } = await supabase.from("applications").select("id").eq("project_id", projectId).eq("user_id", user.id).single();
   if (existing) return { error: "You have already applied to this project." };
 
   const { error } = await supabase.from("applications").insert({
@@ -129,15 +106,34 @@ export async function applyToProject(projectId: string, roleId: string, roleTitl
 
   if (error) return { error: error.message };
 
+  // EMAIL: Notify Owner
+  // const { data } = await supabase.from("projects").select("name, profiles:owner_id(email)").eq("id", projectId).single();
+  // const project: any = data;
+
+  // if (project?.profiles?.email) {
+  //   await sendEmail(
+  //     project.profiles.email,
+  //     `👋 New application for ${project.name}`,
+  //     `
+  //     <div style="font-family: sans-serif; color: #333;">
+  //       <h2>Someone wants to join the squad!</h2>
+  //       <p><strong>${user.email}</strong> applied for the <strong>${roleTitle}</strong> role.</p>
+  //       <p><em>"${formData.get("note")}"</em></p>
+  //       <br/>
+  //       <a href="https://cobuild-app.vercel.app/dashboard/projects/${projectId}/applications" style="background: #000; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Review Application</a>
+  //     </div>
+  //     `
+  //   );
+  // }
+
   revalidatePath(`/dashboard/projects/${projectId}`);
   return { success: true };
 }
 
-// 6. Post Comment (This fixes the red underline in ProjectClientUI)
+// 6. Post Comment
 export async function postComment(projectId: string, content: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return { error: "Login required" };
 
   const { error } = await supabase.from("comments").insert({
@@ -147,46 +143,30 @@ export async function postComment(projectId: string, content: string) {
   });
 
   if (error) return { error: error.message };
-
   revalidatePath(`/dashboard/projects/${projectId}`);
   return { success: true };
 }
 
-
-// ... existing imports ...
-// 7. Manage Application (Accept/Decline)
+// 7. Manage Application (With Email)
 export async function manageApplication(
   applicationId: string, 
   projectId: string, 
   status: 'accepted' | 'declined',
-  roleId: string, // Which slot in the JSON is this?
+  roleId: string,
   applicant: { id: string; full_name: string; email: string; username: string }
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return { error: "Login required" };
 
-  // 1. Verify Ownership (Security Check)
-  const { data: project } = await supabase
-    .from("projects")
-    .select("owner_id, squad")
-    .eq("id", projectId)
-    .single();
+  const { data } = await supabase.from("projects").select("owner_id, squad, name").eq("id", projectId).single();
+  const project: any = data;
 
-  if (!project || project.owner_id !== user.id) {
-    return { error: "Unauthorized" };
-  }
+  if (!project || project.owner_id !== user.id) return { error: "Unauthorized" };
 
-  // 2. Update Application Status
-  const { error: appError } = await supabase
-    .from("applications")
-    .update({ status })
-    .eq("id", applicationId);
-
+  const { error: appError } = await supabase.from("applications").update({ status }).eq("id", applicationId);
   if (appError) return { error: appError.message };
 
-  // 3. IF ACCEPTED: Update Project Squad JSON
   if (status === 'accepted') {
     const updatedSquad = project.squad.map((member: any) => {
       if (member.id === roleId) {
@@ -194,7 +174,6 @@ export async function manageApplication(
           ...member,
           isFilled: true,
           filledBy: applicant.id,
-          // We can store minimal user info here for easy display
           name: applicant.full_name,
           username: applicant.username
         };
@@ -202,12 +181,25 @@ export async function manageApplication(
       return member;
     });
 
-    const { error: squadError } = await supabase
-      .from("projects")
-      .update({ squad: updatedSquad })
-      .eq("id", projectId);
-
+    const { error: squadError } = await supabase.from("projects").update({ squad: updatedSquad }).eq("id", projectId);
     if (squadError) return { error: "Failed to update squad roster" };
+
+    // EMAIL: Notify Applicant
+    // if (applicant.email) {
+    //    await sendEmail(
+    //      applicant.email,
+    //      `🎉 You're in! Welcome to ${project.name}`,
+    //      `
+    //      <div style="font-family: sans-serif; color: #333;">
+    //        <h2 style="color: green;">Application Accepted</h2>
+    //        <p>You are officially part of the <strong>${project.name}</strong> squad.</p>
+    //        <p>The workspace links (Discord/GitHub) are now unlocked.</p>
+    //        <br/>
+    //        <a href="https://cobuild-app.vercel.app/dashboard/projects/${projectId}" style="background: #2563EB; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Go to Workspace</a>
+    //      </div>
+    //      `
+    //    );
+    // }
   }
 
   revalidatePath(`/dashboard/projects/${projectId}/applications`);
@@ -215,41 +207,62 @@ export async function manageApplication(
   return { success: true };
 }
 
-
-
 // 8. Remove Member
 export async function removeMember(applicationId: string, projectId: string, roleId: string, reason: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return { error: "Login required" };
 
-  // 1. Fetch Project to verify ownership
   const { data: project } = await supabase.from("projects").select("squad, owner_id").eq("id", projectId).single();
   if (!project || project.owner_id !== user.id) return { error: "Unauthorized" };
 
-  // 2. Update Application (Mark as Removed)
   await supabase.from("applications").update({ status: 'removed', note: reason }).eq("id", applicationId);
 
-  // 3. Reset Squad Slot in JSON
   const updatedSquad = project.squad.map((member: any) => {
       if (member.id === roleId) {
-        return {
-          ...member,
-          isFilled: false,
-          filledBy: null,
-          name: null,
-          username: null
-        };
+        return { ...member, isFilled: false, filledBy: null, name: null, username: null };
       }
       return member;
   });
 
   const { error } = await supabase.from("projects").update({ squad: updatedSquad }).eq("id", projectId);
-
   if (error) return { error: error.message };
 
   revalidatePath(`/dashboard/projects/${projectId}/applications`);
   revalidatePath(`/dashboard/projects/${projectId}`);
+  return { success: true };
+}
+
+// 9. Send Project Created Email
+// export async function sendProjectCreatedEmail(projectId: string, projectName: string) {
+//   const supabase = await createClient();
+//   const { data: { user } } = await supabase.auth.getUser();
+//   if(!user || !user.email) return;
+
+//   await sendEmail(
+//     user.email,
+//     `🚀 Your project is live: ${projectName}`,
+//     `
+//     <div style="font-family: sans-serif; color: #333;">
+//       <h2>You just started something.</h2>
+//       <p>Your project <strong>${projectName}</strong> is live.</p>
+//       <p>We will notify you when someone applies.</p>
+//       <br/>
+//       <a href="https://cobuild-app.vercel.app/dashboard/projects/${projectId}" style="background: #000; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Project</a>
+//     </div>
+//     `
+//   );
+// }
+
+// 10. Delete Project
+export async function deleteProject(projectId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Login required" };
+
+  const { error } = await supabase.from("projects").delete().eq("id", projectId).eq("owner_id", user.id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard");
   return { success: true };
 }

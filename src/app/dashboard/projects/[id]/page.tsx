@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import ProjectClientUI from "@/components/ProjectClientUI";
 import ApplicationWrapper from "./ApplicationWrapper"; 
+import DeleteProjectWrapper from "./DeleteProjectWrapper";
 import { Clock, Lock, Plus, Github, MessageCircle } from "lucide-react";
 
 const timeAgo = (date: string) => {
@@ -248,7 +249,7 @@ export default async function ProjectDetailsPage(props: { params: Promise<{ id: 
                                     <button className="w-full py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition">Review Apps</button>
                                 </Link>
                             </div>
-                            <button className="w-full mt-2 py-2 border border-red-100 text-red-600 bg-red-50 rounded-lg text-xs font-bold hover:bg-red-100 transition">Close Project</button>
+                            <DeleteProjectWrapper projectId={id} />
                         </div>
                     )}
                 </div>
