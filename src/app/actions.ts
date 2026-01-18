@@ -151,3 +151,66 @@ export async function postComment(projectId: string, content: string) {
   revalidatePath(`/dashboard/projects/${projectId}`);
   return { success: true };
 }
+
+
+// ... existing imports ...
+// 7. Manage Application (Accept/Decline)
+export async function manageApplication(
+  applicationId: string, 
+  projectId: string, 
+  status: 'accepted' | 'declined',
+  roleId: string, // Which slot in the JSON is this?
+  applicant: { id: string; full_name: string; email: string; username: string }
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Login required" };
+
+  // 1. Verify Ownership (Security Check)
+  const { data: project } = await supabase
+    .from("projects")
+    .select("owner_id, squad")
+    .eq("id", projectId)
+    .single();
+
+  if (!project || project.owner_id !== user.id) {
+    return { error: "Unauthorized" };
+  }
+
+  // 2. Update Application Status
+  const { error: appError } = await supabase
+    .from("applications")
+    .update({ status })
+    .eq("id", applicationId);
+
+  if (appError) return { error: appError.message };
+
+  // 3. IF ACCEPTED: Update Project Squad JSON
+  if (status === 'accepted') {
+    const updatedSquad = project.squad.map((member: any) => {
+      if (member.id === roleId) {
+        return {
+          ...member,
+          isFilled: true,
+          filledBy: applicant.id,
+          // We can store minimal user info here for easy display
+          name: applicant.full_name,
+          username: applicant.username
+        };
+      }
+      return member;
+    });
+
+    const { error: squadError } = await supabase
+      .from("projects")
+      .update({ squad: updatedSquad })
+      .eq("id", projectId);
+
+    if (squadError) return { error: "Failed to update squad roster" };
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}/applications`);
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  return { success: true };
+}

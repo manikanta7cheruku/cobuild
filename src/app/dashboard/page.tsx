@@ -187,7 +187,16 @@ function DashboardContent() {
                                                 projects.filter(p => p.owner_id === user?.id).map(p => (
                                                     <div key={p.id} className="bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm mb-2 group">
                                                         <div className="flex justify-between items-center"><span className="text-[13px] font-bold text-slate-800 truncate font-sans">{p.name}</span><span className="text-[9px] bg-red-50 text-red-500 px-1.5 rounded-full font-bold uppercase">Owner</span></div>
-                                                        <button onClick={() => {setActiveFilter("Leading"); setUserMenuOpen(false);}} className="text-[10px] text-blue-600 font-bold hover:underline font-sans cursor-pointer">Manage Squad & Status →</button>
+                                                      <button 
+  onClick={(e) => {
+     e.stopPropagation();
+     setUserMenuOpen(false);
+     router.push(`/dashboard/projects/${p.id}/applications`); // <--- Navigate to Review Page
+  }} 
+  className="text-[10px] text-blue-600 font-bold hover:underline font-sans cursor-pointer"
+>
+  Manage Squad & Status →
+</button>
                                                     </div>
                                                 ))
                                             ) : (

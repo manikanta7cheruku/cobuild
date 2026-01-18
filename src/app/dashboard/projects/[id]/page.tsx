@@ -133,15 +133,28 @@ export default async function ProjectDetailsPage(props: { params: Promise<{ id: 
                                 return (
                                     <div key={member.id}>
                                         {member.isFilled ? (
-                                            /* FILLED SLOT */
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border border-slate-100"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${member.title}`} alt="avatar" /></div>
-                                                    <div><p className="text-sm font-bold text-slate-900">{member.type === 'leader' ? project.profiles.full_name : "Squad Member"}</p><p className="text-xs text-slate-500">{member.title}</p></div>
-                                                </div>
-                                                {member.type === 'leader' ? <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold">Admin</span> : <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">Ready</span>}
-                                            </div>
-                                        ) : (
+    /* FILLED SLOT */
+    <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border border-slate-100">
+                {/* We need to use the REAL avatar of the person who filled it */}
+                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${member.username || member.title}`} alt="avatar" />
+            </div>
+            <div>
+                <p className="text-sm font-bold text-slate-900">
+                    {/* Use the name saved in the JSON, or fallback to Owner if it's the leader */}
+                    {member.type === 'leader' ? project.profiles.full_name : (member.name || "Squad Member")}
+                </p>
+                <p className="text-xs text-slate-500">{member.title}</p>
+            </div>
+        </div>
+        {member.type === 'leader' ? (
+            <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold">Admin</span>
+        ) : (
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">Joined</span>
+        )}
+    </div>
+) : (
                                             /* OPEN SLOT */
                                             <div className={containerClass}>
                                                 <div className="flex items-center justify-between gap-4 w-full">
@@ -186,11 +199,23 @@ export default async function ProjectDetailsPage(props: { params: Promise<{ id: 
                                 <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">Owner View</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                                <button className="py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition">Edit Project</button>
-                                {/* In future, link this to a real Apps Management page */}
-                                <button className="py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition">Review Apps</button>
+                                {/* 1. EDIT BUTTON */}
+                                <Link href={`/dashboard/projects/${id}/edit`} className="w-full">
+                                    <button className="w-full py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+                                        Edit Project
+                                    </button>
+                                </Link>
+
+                                {/* 2. REVIEW APPS BUTTON */}
+                                <Link href={`/dashboard/projects/${id}/applications`} className="w-full">
+                                    <button className="w-full py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+                                        Review Apps
+                                    </button>
+                                </Link>
                             </div>
-                            <button className="w-full mt-2 py-2 border border-red-100 text-red-600 bg-red-50 rounded-lg text-xs font-bold hover:bg-red-100 transition">Close Project</button>
+                            <button className="w-full mt-2 py-2 border border-red-100 text-red-600 bg-red-50 rounded-lg text-xs font-bold hover:bg-red-100 transition">
+                                Close Project
+                            </button>
                         </div>
                     )}
                 </div>
