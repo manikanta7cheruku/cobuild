@@ -214,3 +214,42 @@ export async function manageApplication(
   revalidatePath(`/dashboard/projects/${projectId}`);
   return { success: true };
 }
+
+
+
+// 8. Remove Member
+export async function removeMember(applicationId: string, projectId: string, roleId: string, reason: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Login required" };
+
+  // 1. Fetch Project to verify ownership
+  const { data: project } = await supabase.from("projects").select("squad, owner_id").eq("id", projectId).single();
+  if (!project || project.owner_id !== user.id) return { error: "Unauthorized" };
+
+  // 2. Update Application (Mark as Removed)
+  await supabase.from("applications").update({ status: 'removed', note: reason }).eq("id", applicationId);
+
+  // 3. Reset Squad Slot in JSON
+  const updatedSquad = project.squad.map((member: any) => {
+      if (member.id === roleId) {
+        return {
+          ...member,
+          isFilled: false,
+          filledBy: null,
+          name: null,
+          username: null
+        };
+      }
+      return member;
+  });
+
+  const { error } = await supabase.from("projects").update({ squad: updatedSquad }).eq("id", projectId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/dashboard/projects/${projectId}/applications`);
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  return { success: true };
+}

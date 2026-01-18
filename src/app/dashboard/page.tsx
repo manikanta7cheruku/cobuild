@@ -35,6 +35,7 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [myApplications, setMyApplications] = useState<any[]>([]);
 
   // --- HELPERS ---
   const getRelativeTime = (dateString: string) => {
@@ -72,6 +73,15 @@ function DashboardContent() {
 
         if (projData) setProjects(projData as any[]);
 
+                // --- NEW CODE: Fetch My Applications ---
+        const { data: appData } = await supabase
+          .from("applications")
+          .select("*, projects(name)") // Fetch the project name too
+          .eq("user_id", authUser.id);
+
+        if (appData) setMyApplications(appData);
+        // --- END NEW CODE ---
+
         // REPLACED MAP WITH FOR-LOOP TO KILL THE TYPE ERROR
         if (favData) {
           const tempFavs: string[] = [];
@@ -85,6 +95,9 @@ function DashboardContent() {
     }
     getData();
   }, [supabase]);
+
+  //Fetch the applications table.
+  
 
   // 2. SEARCH & FILTER LOGIC
   const filteredProjects = projects.filter(p => {
@@ -188,22 +201,54 @@ function DashboardContent() {
                                                     <div key={p.id} className="bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm mb-2 group">
                                                         <div className="flex justify-between items-center"><span className="text-[13px] font-bold text-slate-800 truncate font-sans">{p.name}</span><span className="text-[9px] bg-red-50 text-red-500 px-1.5 rounded-full font-bold uppercase">Owner</span></div>
                                                       <button 
-  onClick={(e) => {
-     e.stopPropagation();
-     setUserMenuOpen(false);
-     router.push(`/dashboard/projects/${p.id}/applications`); // <--- Navigate to Review Page
-  }} 
-  className="text-[10px] text-blue-600 font-bold hover:underline font-sans cursor-pointer"
->
-  Manage Squad & Status →
-</button>
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setUserMenuOpen(false);
+                                                            router.push(`/dashboard/projects/${p.id}/applications`); // <--- Navigate to Review Page
+                                                          }} 
+                                                          className="text-[10px] text-blue-600 font-bold hover:underline font-sans cursor-pointer"
+                                                        >
+                                                          Manage Squad & Status →
+                                                      </button>
                                                     </div>
                                                 ))
                                             ) : (
                                                 <div className="py-1 text-left"><p className="text-[11px] text-slate-400 italic">No projects created yet.</p><button onClick={goToStartProject} className="text-[11px] text-blue-600 font-bold mt-1 hover:underline cursor-pointer">+ Start Project</button></div>
                                             )}
                                         </div>
-                                        <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 font-sans">Member Of</p><p className="text-[11px] text-slate-500 font-medium italic">Join a project to build your squad.</p><button onClick={() => {setActiveFilter("All Projects"); setUserMenuOpen(false);}} className="text-[11px] text-blue-600 font-bold mt-1 hover:underline cursor-pointer">Explore Projects →</button></div>
+                                                                               <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 font-sans">Member Of</p>
+                                            
+                                            {/* 1. ACCEPTED PROJECTS (Active Squads) */}
+                                            {projects.filter(p => p.squad?.some((m: any) => m.filledBy === user?.id)).map(p => (
+                                                <div key={p.id} onClick={() => router.push(`/dashboard/projects/${p.id}`)} className="bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm mb-2 cursor-pointer hover:border-blue-300 transition group">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[13px] font-bold text-slate-800 truncate font-sans">{p.name}</span>
+                                                        <span className="text-[9px] bg-green-50 text-green-600 px-1.5 rounded-full font-bold uppercase border border-green-100">Active</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-400 mt-1 group-hover:text-blue-500 transition">View Workspace →</p>
+                                                </div>
+                                            ))}
+
+                                            {/* 2. PENDING APPLICATIONS */}
+                                            {myApplications.filter(a => a.status === 'pending').map(app => (
+                                                <div key={app.id} className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 mb-2 opacity-75">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[13px] font-bold text-slate-600 truncate font-sans">{app.projects?.name || "Unknown Project"}</span>
+                                                        <span className="text-[9px] bg-yellow-50 text-yellow-600 px-1.5 rounded-full font-bold uppercase border border-yellow-100">Pending</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-400 mt-1 italic">Waiting for owner...</p>
+                                                </div>
+                                            ))}
+
+                                            {/* EMPTY STATE */}
+                                            {projects.filter(p => p.squad?.some((m: any) => m.filledBy === user?.id)).length === 0 && myApplications.filter(a => a.status === 'pending').length === 0 && (
+                                                <div className="py-1 text-left">
+                                                    <p className="text-[11px] text-slate-500 font-medium italic">Join a project to build your squad.</p>
+                                                    <button onClick={() => {setActiveFilter("All Projects"); setUserMenuOpen(false);}} className="text-[11px] text-blue-600 font-bold mt-1 hover:underline cursor-pointer">Explore Projects →</button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>
