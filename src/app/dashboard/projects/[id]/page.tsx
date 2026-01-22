@@ -7,6 +7,7 @@ import DeleteProjectWrapper from "./DeleteProjectWrapper";
 import LeaveSquadWrapper from "@/components/LeaveSquadWrapper";
 import { Clock, Lock, Plus, Github, MessageCircle } from "lucide-react";
 
+//export const revalidate = 60; // Cache this page for 60 seconds
 const timeAgo = (date: string) => {
   const diff = new Date().getTime() - new Date(date).getTime();
   const days = Math.floor(diff / (1000 * 3600 * 24));
