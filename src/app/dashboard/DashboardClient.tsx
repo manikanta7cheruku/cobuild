@@ -9,8 +9,9 @@ import {
   ChevronDown, ChevronUp, Briefcase, ArrowRight, Clock 
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
-// Accept initial data as props
+// Accept initial data as props from the Server Component
 export default function DashboardClient({ 
   user, 
   profile, 
@@ -118,7 +119,14 @@ export default function DashboardClient({
           <div className="hidden md:block flex-1 max-w-md mx-8">
             <div className="relative">
               <span className="absolute left-3 top-2.5 text-slate-400"><Search size={18} /></span>
-              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search projects or builders..." className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 transition shadow-inner" />
+              <input 
+                suppressHydrationWarning
+                type="text" 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+                placeholder="Search projects or builders..." 
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 transition shadow-inner" 
+              />
             </div>
           </div>
 
@@ -149,12 +157,16 @@ export default function DashboardClient({
                                 {projectsAccordionOpen && (
                                     <div className="bg-[#F8FAFC] pb-3 px-5 space-y-4 animate-in fade-in duration-200 text-left">
                                         <div className="pt-2"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 font-sans">Leading</p>
-                                            {projects.filter(p => p.owner_id === user?.id).map(p => (
-                                                <div key={p.id} onClick={(e) => { e.stopPropagation(); setUserMenuOpen(false); router.push(`/dashboard/projects/${p.id}/applications`) }} className="bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm mb-2 cursor-pointer hover:border-blue-300 transition group">
-                                                    <div className="flex justify-between items-center"><span className="text-[13px] font-bold text-slate-800 truncate font-sans">{p.name}</span><span className="text-[9px] bg-red-50 text-red-500 px-1.5 rounded-full font-bold uppercase">Owner</span></div>
-                                                    <p className="text-[10px] text-blue-600 font-bold mt-1 group-hover:underline">Manage Squad & Status →</p>
-                                                </div>
-                                            ))}
+                                            {projects.filter(p => p.owner_id === user?.id).length > 0 ? (
+                                                projects.filter(p => p.owner_id === user?.id).map(p => (
+                                                    <div key={p.id} onClick={(e) => { e.stopPropagation(); setUserMenuOpen(false); router.push(`/dashboard/projects/${p.id}/applications`) }} className="bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm mb-2 cursor-pointer hover:border-blue-300 transition group">
+                                                        <div className="flex justify-between items-center"><span className="text-[13px] font-bold text-slate-800 truncate font-sans">{p.name}</span><span className="text-[9px] bg-red-50 text-red-500 px-1.5 rounded-full font-bold uppercase">Owner</span></div>
+                                                        <p className="text-[10px] text-blue-600 font-bold mt-1 group-hover:underline">Manage Squad & Status →</p>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="py-1 text-left"><p className="text-[11px] text-slate-400 italic">No projects created yet.</p><button onClick={goToStartProject} className="text-[11px] text-blue-600 font-bold mt-1 hover:underline cursor-pointer">+ Start Project</button></div>
+                                            )}
                                         </div>
                                         <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 font-sans">Member Of</p>
                                             {/* ACTIVE */}
@@ -166,7 +178,18 @@ export default function DashboardClient({
                                             {/* PENDING */}
                                             {myApplications.filter(a => a.status === 'pending').map(app => (
                                                 <div key={app.id} className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 mb-2 opacity-75">
-                                                    <div className="flex justify-between items-center"><span className="text-[13px] font-bold text-slate-600 truncate font-sans">{app.projects?.name}</span><span className="text-[9px] bg-yellow-50 text-yellow-600 px-1.5 rounded-full font-bold uppercase">Pending</span></div>
+                                                    <div className="flex justify-between items-center"><span className="text-[13px] font-bold text-slate-600 truncate font-sans">{app.projects?.name || "Project"}</span><span className="text-[9px] bg-yellow-50 text-yellow-600 px-1.5 rounded-full font-bold uppercase border border-yellow-100">Pending</span></div>
+                                                    <p className="text-[10px] text-slate-400 mt-1 italic">Waiting for owner...</p>
+                                                </div>
+                                            ))}
+                                            {/* HISTORY (Removed/Left) */}
+                                            {myApplications.filter(a => a.status === 'removed' || a.status === 'left').map(app => (
+                                                <div key={app.id} className="bg-red-50 border border-red-100 rounded-lg p-2.5 mb-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[13px] font-bold text-slate-600 truncate font-sans">{app.projects?.name}</span>
+                                                        <span className="text-[9px] bg-white border border-red-200 text-red-500 px-1.5 rounded-full font-bold uppercase">{app.status === 'left' ? 'Left' : 'Removed'}</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-500 mt-1 italic line-clamp-1">"{app.note}"</p>
                                                 </div>
                                             ))}
                                         </div>
@@ -189,17 +212,30 @@ export default function DashboardClient({
           <div className="flex gap-2 text-left">
               <div className="relative flex-1">
                   <span className="absolute left-3 top-2 text-slate-400"><Search size={14} /></span>
-                  <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search..." className="w-full pl-8 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none" />
+                  <input 
+                    suppressHydrationWarning
+                    type="text" 
+                    value={searchQuery} 
+                    onChange={(e) => setSearchQuery(e.target.value)} 
+                    placeholder="Search..." 
+                    className="w-full pl-8 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none" 
+                  />
               </div>
               <button onClick={toggleMobileFilters} className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 cursor-pointer shadow-sm active:bg-slate-50 transition"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg></button>
           </div>
       </div>
 
-      <div className={`md:hidden bg-slate-50 border-b border-slate-200 overflow-y-auto transition-all duration-300 ${mobileFiltersOpen ? 'max-h-[70vh] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className={`md:hidden bg-slate-50 border-b border-slate-200 overflow-y-auto transition-all duration-300 ${mobileFiltersOpen ? 'max-h-[70vh] opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="p-4 space-y-6 text-left">
               <div><h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Project Stage</h3>
                   <div className="flex flex-wrap gap-2">{["All Projects", "Idea Phase", "Favorites"].map(f => (<button key={f} onClick={() => {setActiveFilter(f); setMobileFiltersOpen(false)}} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer ${activeFilter === f ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-white border-slate-200'}`}>{f}</button>))}</div>
               </div>
+              
+              {/* ADDED: Looking For Filter */}
+              <div><h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Looking For</h3>
+                  <div className="flex flex-wrap gap-2">{["Any", "Developer", "Designer", "Marketing"].map(r => (<button key={r} onClick={() => {setLookingFor(r); setMobileFiltersOpen(false)}} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer ${lookingFor === r ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-white border-slate-200'}`}>{r}</button>))}</div>
+              </div>
+
               <button onClick={toggleMobileFilters} className="w-full py-2.5 bg-slate-900 text-white rounded-lg font-bold text-sm cursor-pointer active:scale-95 transition">Apply Filters</button>
           </div>
       </div>
@@ -239,7 +275,7 @@ export default function DashboardClient({
                           <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wide font-sans ${project.limit_to_uni ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-green-50 text-green-700 border-green-100'}`}>{project.limit_to_uni ? "Campus Only" : "Idea Phase"}</span>
                           <span className="text-[10px] text-slate-400 font-bold font-sans flex items-center gap-1"><Clock size={10} /> {getRelativeTime(project.created_at)}</span>
                       </div>
-                      <button onClick={(e) => toggleFavorite(e, project.id)} className={`transition-all transform active:scale-125 cursor-pointer z-10 ${favorites.includes(project.id) ? 'text-yellow-400' : 'text-slate-300 hover:text-yellow-400'}`}><Star size={18} fill={favorites.includes(project.id) ? "currentColor" : "none"} strokeWidth={2.5} /></button>
+                      <button onClick={(e) => toggleFavorite(e, project.id)} className={`z-10 transition-all transform active:scale-125 cursor-pointer ${favorites.includes(project.id) ? 'text-yellow-400' : 'text-slate-300 hover:text-yellow-400'}`}><Star size={18} fill={favorites.includes(project.id) ? "currentColor" : "none"} strokeWidth={2.5} /></button>
                     </div>
                     <div className="mb-auto"><h2 className="text-[17px] md:text-[18px] font-bold text-slate-900 mb-2 leading-tight group-hover:text-blue-600 transition tracking-tight font-sans text-left">{project.name}</h2><p className="text-[13px] md:text-[14px] text-slate-500 mb-5 line-clamp-2 leading-relaxed font-medium font-sans text-left">{project.pitch}</p><div className="flex flex-wrap gap-1.5 mb-4">{project.tech_stack?.map((tech: string) => (<span key={tech} className="px-2 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded text-[9px] font-bold uppercase tracking-tight transition-colors group-hover:bg-blue-50 font-sans">#{tech}</span>))}</div></div>
                     <div className="border-t border-slate-100 pt-4 mt-2 flex items-center justify-between"><div className="flex items-center gap-2 text-left"><div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center text-[9px] font-bold text-slate-500 uppercase tracking-tighter">{project.owner_id === user?.id ? "YOU" : (project.profiles?.full_name?.substring(0,2).toUpperCase() || "MK")}</div><span className="text-[11px] text-slate-600 font-bold uppercase tracking-tight font-sans">Lead</span></div><div className="flex items-center gap-1.5 bg-green-50 px-2.5 py-1 rounded-lg border border-green-100 font-sans"><span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span></span><span className="text-[10px] md:text-[11px] font-bold text-green-700 tracking-tight font-sans">{getOpenSpotsCount(project.squad)} spots open</span></div></div>
